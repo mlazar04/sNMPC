@@ -1,7 +1,15 @@
 # sNMPC
-Matlab toolbox for computing terminal costs and sets for stabilizing nonlinear MPC
+Matlab toolbox for computing terminal costs and sets for stabilizing nonlinear MPC.
 
-If you use sNMPC in your research, please cite the following paper:
+The toolbox consists of a set of Matlab functions, which are described in the PDF sNMPC Toolbox User Manual.
+
+Installation simply requires copying the files on your computer and adding the folder to the path. 
+
+However, several other toolboxes have to be installed as detailed in the User Manual.
+
+Several example files are provided which can be edited by the user to define your own example/settings.
+
+If you use sNMPC in your research, please cite the following paper (to appear in IFAC PapersOnLine after the MTNS 2022 in September):
 
 ```bibtex
 @inproceedings{sNMPC2022,
