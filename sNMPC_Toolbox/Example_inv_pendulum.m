@@ -35,7 +35,7 @@ sys.u_high=2*ones(sys.m,1);
 p=struct;
 
 % Number of terminal sets
-p.M=1;
+p.M=10;
 % Horizon
 p.N=1;
 % Cost matrices
@@ -71,7 +71,7 @@ ysetoptions=sdpsettings('solver','mosek','verbose',0);
 
 % Type of the approxiamtion and contorl law
 fprintf('\n1: Linear 2: Quasi-second order 3: Linear+NLcontrol 4: Quasi-second order+NLcontrol\n');
-choice='Choose scaling via nonlinear optimisation method:';
+choice='Choose approximation order and terminal control law:';
 Mode=input(choice);
 
 %% Linearization and computation of the Hessian for Taylor approximation
@@ -99,62 +99,74 @@ plot_ellipsoidal_sets(sys, p, E2, VOL2, XUset, Xset_scaled);
 hold off
 
 %% Simulation in CasADi
-import casadi.*
+fprintf('\nWould you like to simulate the system?\n' );
+fprintf('CasADi is required (must be added to path)!\n')
+choice = 'y/n:';
 
-% Define states,inputs and system equations in CasADi format
-s.Ts=sys.Ts;
-s.x1=SX.sym('x1');
-s.x2=SX.sym('x2');
-s.u=SX.sym('u');
+if input(choice,"s") == 'y'
+    % import CasADi
+    import casadi.*
 
-s.x = [s.x1; s.x2];
+    % Define states,inputs and system equations in CasADi format
+    s.Ts=sys.Ts;
+    s.x1=SX.sym('x1');
+    s.x2=SX.sym('x2');
+    s.u=SX.sym('u');
 
-s.fx=[s.x1+s.Ts*m*gr*Ls*sin(s.x2);s.Ts*s.x1+s.x2];
-s.fu=[Cm*s.Ts;0];
-s.xdot=s.fx+s.fu*s.u;
+    s.x = [s.x1; s.x2];
 
-s.x_low=sys.x_low;
-s.x_high=sys.x_high;
-s.u_low=sys.u_low;
-s.u_high=sys.u_high;
+    s.fx=[s.x1+s.Ts*m*gr*Ls*sin(s.x2);s.Ts*s.x1+s.x2];
+    s.fu=[Cm*s.Ts;0];
+    s.xdot=s.fx+s.fu*s.u;
 
-%% Plot domian of attraction
-x_axis = -10:0.5:10;
-y_axis = -10:0.5:10;
+    s.x_low=sys.x_low;
+    s.x_high=sys.x_high;
+    s.u_low=sys.u_low;
+    s.u_high=sys.u_high;
 
-[feasible_points, infeasible_points]=plot_DOA(s,sys,p,P,alpha,alphascale,x_axis,y_axis,E2, VOL2, XUset, Xset_scaled);
+    %% Plot domian of attraction
+    x_axis = -10:0.5:10;
+    y_axis = -10:0.5:10;
 
-%% Find initial terminal set for an initial condition
-x0=[-10;10];
-[feasible,init_index]=find_init_set(s,p,P,alpha,alphascale,x0)
+    fprintf('\nWould you like to obtain a domain of attraction representation?\n' );
+    fprintf('This takes a few minutes! Only available in 2D!\n')
+    choice = 'y/n:';
 
-%% Simulate the system
-sim_tim = 20; % Maximum simulation time
+    if input(choice,"s") == 'y'
+        [feasible_points, infeasible_points]=plot_DOA(s,sys,p,P,alpha,alphascale,x_axis,y_axis,E2, VOL2, XUset, Xset_scaled);
+    end
+    %% Find initial terminal set for an initial condition
+    x0=[-10;10];
+    [feasible,init_index]=find_init_set(s,p,P,alpha,alphascale,x0)
 
-[traj,t,ss_error,cost]=casadi_simulation(s,p,P,K,alpha,alphascale,x0,init_index,sim_tim);
-length(traj)
+    %% Simulate the system
+    sim_tim = 20; % Maximum simulation time
 
-%% Plot state trajectories and NMPC cost evolution
+    [traj,t,ss_error,cost]=casadi_simulation(s,p,P,K,alpha,alphascale,x0,init_index,sim_tim);
+    length(traj)
 
-% State trajectory
-figure()
-plot_ellipsoidal_sets(sys, p, E2, VOL2, XUset, Xset_scaled);
-plot(x0(1),x0(2),'o','MarkerFaceColor','r')
-plot(traj(1,:),traj(2,:),'r','LineWidth',1);
-title('State trajectory and terminal sets')
+    %% Plot state trajectories and NMPC cost evolution
 
-% Evolution of the NMPC cost function
-figure()
-hold on
-plot(0:length(cost)-1,cost,'r','LineWidth',1);
-title('Evolution of the NMPC cost function')
-xlabel('iteration') 
-ylabel('value of the cost function') 
+    % State trajectory
+    figure()
+    plot_ellipsoidal_sets(sys, p, E2, VOL2, XUset, Xset_scaled);
+    plot(x0(1),x0(2),'o','MarkerFaceColor','r')
+    plot(traj(1,:),traj(2,:),'r','LineWidth',1);
+    title('State trajectory and terminal sets')
 
-% Evolution of system states 
-figure()
-hold on; 
-plot(traj(1,:),'-','Color','b','LineWidth',1); 
-plot(traj(2,:),'--','Color','b','LineWidth',1);
-title('Evolution of system states')
-legend('x1','x2');
+    % Evolution of the NMPC cost function
+    figure()
+    hold on
+    plot(0:length(cost)-1,cost,'r','LineWidth',1);
+    title('Evolution of the NMPC cost function')
+    xlabel('iteration') 
+    ylabel('value of the cost function') 
+
+    % Evolution of system states 
+    figure()
+    hold on; 
+    plot(0:length(traj)-1,traj(1,:),'-','Color','b','LineWidth',1); 
+    plot(0:length(traj)-1,traj(2,:),'--','Color','b','LineWidth',1);
+    title('Evolution of system states')
+    legend('x1','x2');
+end

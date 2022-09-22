@@ -75,7 +75,7 @@ ysetoptions=sdpsettings('solver','mosek','verbose',0);
 % Type of the approxiamtion and contorl law
 % Type of the approxiamtion and contorl law
 fprintf('\n1: Linear 2: Quasi-second order 3: Linear+NLcontrol 4: Quasi-second order+NLcontrol\n');
-choice='Choose scaling via nonlinear optimisation method:';
+choice='Choose approximation order and terminal control law:';
 Mode=input(choice);
 
 %% Linearization and computation of the Hessian for LDI approximation
@@ -101,57 +101,63 @@ plot_ellipsoidal_sets(sys, p, E2, VOL2, XUset, Xset_scaled);
 hold off
 
 %% Simulation in CasADi
+fprintf('\nWould you like to simulate the system?\n' );
+fprintf('CasADi is required (must be added to path)!\n')
+choice = 'y/n:';
 
-% Add CasADi to your MATLAB path
-import casadi.*
+if input(choice,"s") == 'y'
 
-% Define states,inputs and system equations in CasADi format
-s.Ts=sys.Ts;
-s.x1=SX.sym('x1');
-s.x2=SX.sym('x2');
-s.x3=SX.sym('x3');
-s.x4=SX.sym('x4');
-s.u=SX.sym('u');
+    % import CasADi
+    import casadi.*
 
-s.x = [s.x1; s.x2; s.x3; s.x4];
+    % Define states,inputs and system equations in CasADi format
+    s.Ts=sys.Ts;
+    s.x1=SX.sym('x1');
+    s.x2=SX.sym('x2');
+    s.x3=SX.sym('x3');
+    s.x4=SX.sym('x4');
+    s.u=SX.sym('u');
 
-s.fx=[s.x1+s.Ts*s.x2;s.x2+s.Ts*(-M1*g*l1/Jl*sin(s.x1)-k/Jl*(s.x1-s.x3));
-      s.x3+s.Ts*s.x4;s.x4+s.Ts*(k/Jr*(s.x1-s.x3))];
-s.fu=s.Ts*[0; 0; 0; 1/Jr];
-s.xdot=s.fx+s.fu*s.u;
+    s.x = [s.x1; s.x2; s.x3; s.x4];
 
-s.x_low=sys.x_low;
-s.x_high=sys.x_high;
-s.u_low=sys.u_low;
-s.u_high=sys.u_high;
+    s.fx=[s.x1+s.Ts*s.x2;s.x2+s.Ts*(-M1*g*l1/Jl*sin(s.x1)-k/Jl*(s.x1-s.x3));
+          s.x3+s.Ts*s.x4;s.x4+s.Ts*(k/Jr*(s.x1-s.x3))];
+    s.fu=s.Ts*[0; 0; 0; 1/Jr];
+    s.xdot=s.fx+s.fu*s.u;
+
+    s.x_low=sys.x_low;
+    s.x_high=sys.x_high;
+    s.u_low=sys.u_low;
+    s.u_high=sys.u_high;
 
 
-%% Find initial terminal set for an initial condition
-x0=[-1;1;-1;1];
-[feasible,init_index]=find_init_set(s,p,P,alpha,alphascale,x0)
+    %% Find initial terminal set for an initial condition
+    x0=[-1;1;-1;1];
+    [feasible,init_index]=find_init_set(s,p,P,alpha,alphascale,x0)
 
-%% Simulate the system
-sim_tim = 20; % Maximum simulation time
+    %% Simulate the system
+    sim_tim = 20; % Maximum simulation time
 
-[traj,t,ss_error,cost]=casadi_simulation(s,p,P,K,alpha,alphascale,x0,init_index,sim_tim);
-length(traj)
+    [traj,t,ss_error,cost]=casadi_simulation(s,p,P,K,alpha,alphascale,x0,init_index,sim_tim);
+    length(traj)
 
-%% Plot state trajectories and NMPC cost evolution
+    %% Plot state trajectories and NMPC cost evolution
 
-% Evolution of the NMPC cost function
-figure()
-hold on
-plot(0:length(cost)-1,cost,'r','LineWidth',1);
-title('Evolution of the NMPC cost function')
-xlabel('iteration') 
-ylabel('value of the cost function') 
+    % Evolution of the NMPC cost function
+    figure()
+    hold on
+    plot(0:length(cost)-1,cost,'r','LineWidth',1);
+    title('Evolution of the NMPC cost function')
+    xlabel('iteration') 
+    ylabel('value of the cost function') 
 
-% Evolution of system states 
-figure()
-hold on; 
-plot(traj(1,:),'-','Color','b','LineWidth',1); 
-plot(traj(2,:),'--','Color','b','LineWidth',1);
-plot(traj(3,:),'--','Color','r','LineWidth',1);
-plot(traj(4,:),'--','Color','r','LineWidth',1);
-title('Evolution of system states')
-legend('x1','x2','x3','x4');
+    % Evolution of system states 
+    figure()
+    hold on; 
+    plot(0:length(traj)-1,traj(1,:),'-','Color','b','LineWidth',1); 
+    plot(0:length(traj)-1,traj(2,:),'--','Color','b','LineWidth',1);
+    plot(0:length(traj)-1,traj(3,:),'-','Color','r','LineWidth',1);
+    plot(0:length(traj)-1,traj(4,:),'--','Color','r','LineWidth',1);
+    title('Evolution of system states')
+    legend('x1','x2','x3','x4');
+end
