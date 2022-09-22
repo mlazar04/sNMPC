@@ -97,7 +97,7 @@ hold off
 
 
 %% Simulation in CasADi
-fprintf('\nWould you like to simulate the system?\n' );
+fprintf('\nWould you like to simulate the system or obtain DOA plot?\n' );
 fprintf('CasADi is required (must be added to path)!\n')
 choice = 'y/n:';
 
